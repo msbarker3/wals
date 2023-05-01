@@ -1,0 +1,444 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: white;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 750px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "Hannah Sarvasy", "label": "Hannah Sarvasy", "shape": "dot", "title": "Hannah Sarvasy"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nungon", "label": "Nungon", "shape": "dot", "title": "Nungon"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Karina  Fascinetto-Zago", "label": "Karina  Fascinetto-Zago", "shape": "dot", "title": "Karina  Fascinetto-Zago"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Venetian", "label": "Venetian", "shape": "dot", "title": "Venetian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kihyo Park", "label": "Kihyo Park", "shape": "dot", "title": "Kihyo Park"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Korean", "label": "Korean", "shape": "dot", "title": "Korean"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rebecca Zhu", "label": "Rebecca Zhu", "shape": "dot", "title": "Rebecca Zhu"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Swahili", "label": "Swahili", "shape": "dot", "title": "Swahili"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Luo", "label": "Luo", "shape": "dot", "title": "Luo"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nattanun Chanchaochai", "label": "Nattanun Chanchaochai", "shape": "dot", "title": "Nattanun Chanchaochai"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Thai", "label": "Thai", "shape": "dot", "title": "Thai"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jennifer Culbertson", "label": "Jennifer Culbertson", "shape": "dot", "title": "Jennifer Culbertson"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "K\u00ee\u00eetharaka", "label": "K\u00ee\u00eetharaka", "shape": "dot", "title": "K\u00ee\u00eetharaka"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Simon Kirby", "label": "Simon Kirby", "shape": "dot", "title": "Simon Kirby"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nicaraguan Sign Language", "label": "Nicaraguan Sign Language", "shape": "dot", "title": "Nicaraguan Sign Language"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Valts Ernstreits", "label": "Valts Ernstreits", "shape": "dot", "title": "Valts Ernstreits"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Livonian", "label": "Livonian", "shape": "dot", "title": "Livonian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "M Carmen Parafita Couto", "label": "M Carmen Parafita Couto", "shape": "dot", "title": "M Carmen Parafita Couto"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Galician", "label": "Galician", "shape": "dot", "title": "Galician"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Papiamento", "label": "Papiamento", "shape": "dot", "title": "Papiamento"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Welsh", "label": "Welsh", "shape": "dot", "title": "Welsh"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Iria de-Dios-Flores", "label": "Iria de-Dios-Flores", "shape": "dot", "title": "Iria de-Dios-Flores"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Gede Primahadi Wijaya Rajeg", "label": "Gede Primahadi Wijaya Rajeg", "shape": "dot", "title": "Gede Primahadi Wijaya Rajeg"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Indonesian", "label": "Indonesian", "shape": "dot", "title": "Indonesian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Balinese", "label": "Balinese", "shape": "dot", "title": "Balinese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Anastasiya Lopukhina", "label": "Anastasiya Lopukhina", "shape": "dot", "title": "Anastasiya Lopukhina"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Russian", "label": "Russian", "shape": "dot", "title": "Russian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pegah Faghiri", "label": "Pegah Faghiri", "shape": "dot", "title": "Pegah Faghiri"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Persian", "label": "Persian", "shape": "dot", "title": "Persian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Azler Garcia", "label": "Azler Garcia", "shape": "dot", "title": "Azler Garcia"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Basque", "label": "Basque", "shape": "dot", "title": "Basque"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ingeborg Sophie Ribu", "label": "Ingeborg Sophie Ribu", "shape": "dot", "title": "Ingeborg Sophie Ribu"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Norwegian", "label": "Norwegian", "shape": "dot", "title": "Norwegian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Zed Sehyr", "label": "Zed Sehyr", "shape": "dot", "title": "Zed Sehyr"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "American Sign Language", "label": "American Sign Language", "shape": "dot", "title": "American Sign Language"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Vishal  Arvindam ", "label": "Vishal  Arvindam ", "shape": "dot", "title": "Vishal  Arvindam "}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Telugu ", "label": "Telugu ", "shape": "dot", "title": "Telugu "}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Aigul Khanova", "label": "Aigul Khanova", "shape": "dot", "title": "Aigul Khanova"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tatar", "label": "Tatar", "shape": "dot", "title": "Tatar"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rodrigo Dal Ben", "label": "Rodrigo Dal Ben", "shape": "dot", "title": "Rodrigo Dal Ben"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Portuguese", "label": "Portuguese", "shape": "dot", "title": "Portuguese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Roxana Botezatu", "label": "Roxana Botezatu", "shape": "dot", "title": "Roxana Botezatu"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Spanish", "label": "Spanish", "shape": "dot", "title": "Spanish"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mandarin", "label": "Mandarin", "shape": "dot", "title": "Mandarin"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dutch", "label": "Dutch", "shape": "dot", "title": "Dutch"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Aditi Lahiri", "label": "Aditi Lahiri", "shape": "dot", "title": "Aditi Lahiri"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bengali", "label": "Bengali", "shape": "dot", "title": "Bengali"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Allison Wetterlin", "label": "Allison Wetterlin", "shape": "dot", "title": "Allison Wetterlin"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Swedish", "label": "Swedish", "shape": "dot", "title": "Swedish"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nadja Althaus", "label": "Nadja Althaus", "shape": "dot", "title": "Nadja Althaus"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sandra Kotzor", "label": "Sandra Kotzor", "shape": "dot", "title": "Sandra Kotzor"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Judith Tonhauser", "label": "Judith Tonhauser", "shape": "dot", "title": "Judith Tonhauser"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Guarani", "label": "Guarani", "shape": "dot", "title": "Guarani"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Juhayna  Taha", "label": "Juhayna  Taha", "shape": "dot", "title": "Juhayna  Taha"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Arabic ", "label": "Arabic ", "shape": "dot", "title": "Arabic "}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ahmed Khorsheed", "label": "Ahmed Khorsheed", "shape": "dot", "title": "Ahmed Khorsheed"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Malay", "label": "Malay", "shape": "dot", "title": "Malay"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dorjderem Byambasuren", "label": "Dorjderem Byambasuren", "shape": "dot", "title": "Dorjderem Byambasuren"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mongolian", "label": "Mongolian", "shape": "dot", "title": "Mongolian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bhuvana Narasimhan", "label": "Bhuvana Narasimhan", "shape": "dot", "title": "Bhuvana Narasimhan"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Hindi", "label": "Hindi", "shape": "dot", "title": "Hindi"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tamil", "label": "Tamil", "shape": "dot", "title": "Tamil"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Norielle Adricula", "label": "Norielle Adricula", "shape": "dot", "title": "Norielle Adricula"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tagalog", "label": "Tagalog", "shape": "dot", "title": "Tagalog"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jidong Chen", "label": "Jidong Chen", "shape": "dot", "title": "Jidong Chen"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Aoju Chen", "label": "Aoju Chen", "shape": "dot", "title": "Aoju Chen"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Penelope Brown", "label": "Penelope Brown", "shape": "dot", "title": "Penelope Brown"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tzeltal", "label": "Tzeltal", "shape": "dot", "title": "Tzeltal"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Xinchun Wang", "label": "Xinchun Wang", "shape": "dot", "title": "Xinchun Wang"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Naledi Kgolo-Lotshwao", "label": "Naledi Kgolo-Lotshwao", "shape": "dot", "title": "Naledi Kgolo-Lotshwao"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Setswana", "label": "Setswana", "shape": "dot", "title": "Setswana"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Yuxin Fan", "label": "Yuxin Fan", "shape": "dot", "title": "Yuxin Fan"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Classical Manchu, Evenki (Northern dialects)", "label": "Classical Manchu, Evenki (Northern dialects)", "shape": "dot", "title": "Classical Manchu, Evenki (Northern dialects)"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Madhushree Chakrabarty", "label": "Madhushree Chakrabarty", "shape": "dot", "title": "Madhushree Chakrabarty"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bangla ", "label": "Bangla ", "shape": "dot", "title": "Bangla "}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Elouatiq Abdellah", "label": "Elouatiq Abdellah", "shape": "dot", "title": "Elouatiq Abdellah"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tashelhiyt Berber", "label": "Tashelhiyt Berber", "shape": "dot", "title": "Tashelhiyt Berber"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Evangelia Adamou", "label": "Evangelia Adamou", "shape": "dot", "title": "Evangelia Adamou"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pomak", "label": "Pomak", "shape": "dot", "title": "Pomak"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Romani", "label": "Romani", "shape": "dot", "title": "Romani"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ngigua", "label": "Ngigua", "shape": "dot", "title": "Ngigua"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Suvarrna Alladi", "label": "Suvarrna Alladi", "shape": "dot", "title": "Suvarrna Alladi"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "", "label": "", "shape": "dot", "title": ""}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Luiz Amaral", "label": "Luiz Amaral", "shape": "dot", "title": "Luiz Amaral"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Wapichana", "label": "Wapichana", "shape": "dot", "title": "Wapichana"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Caroline Andrews", "label": "Caroline Andrews", "shape": "dot", "title": "Caroline Andrews"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Shipibo-Konibo", "label": "Shipibo-Konibo", "shape": "dot", "title": "Shipibo-Konibo"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Valentina Bambini", "label": "Valentina Bambini", "shape": "dot", "title": "Valentina Bambini"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Southern Italian Dialects", "label": "Southern Italian Dialects", "shape": "dot", "title": "Southern Italian Dialects"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Brett Baker", "label": "Brett Baker", "shape": "dot", "title": "Brett Baker"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Wubuy", "label": "Wubuy", "shape": "dot", "title": "Wubuy"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Hassan Banaruee", "label": "Hassan Banaruee", "shape": "dot", "title": "Hassan Banaruee"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bandari", "label": "Bandari", "shape": "dot", "title": "Bandari"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Cathi Best", "label": "Cathi Best", "shape": "dot", "title": "Cathi Best"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pranesh Bhargava", "label": "Pranesh Bhargava", "shape": "dot", "title": "Pranesh Bhargava"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sakshi Bhatia", "label": "Sakshi Bhatia", "shape": "dot", "title": "Sakshi Bhatia"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Urdu", "label": "Urdu", "shape": "dot", "title": "Urdu"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Balthasar Bickel", "label": "Balthasar Bickel", "shape": "dot", "title": "Balthasar Bickel"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nepalese", "label": "Nepalese", "shape": "dot", "title": "Nepalese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Vietnamese", "label": "Vietnamese", "shape": "dot", "title": "Vietnamese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Peruvian", "label": "Peruvian", "shape": "dot", "title": "Peruvian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Damian Blasi", "label": "Damian Blasi", "shape": "dot", "title": "Damian Blasi"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ivan Bondoc", "label": "Ivan Bondoc", "shape": "dot", "title": "Ivan Bondoc"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ina Bornkessel-Schlesewsky", "label": "Ina Bornkessel-Schlesewsky", "shape": "dot", "title": "Ina Bornkessel-Schlesewsky"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Australian Indigenous Languauges", "label": "Australian Indigenous Languauges", "shape": "dot", "title": "Australian Indigenous Languauges"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Federica Breimaier", "label": "Federica Breimaier", "shape": "dot", "title": "Federica Breimaier"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Marisa Casillas", "label": "Marisa Casillas", "shape": "dot", "title": "Marisa Casillas"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rossel Islanders", "label": "Rossel Islanders", "shape": "dot", "title": "Rossel Islanders"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dave Kenneth Cayado", "label": "Dave Kenneth Cayado", "shape": "dot", "title": "Dave Kenneth Cayado"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dustin Chacon", "label": "Dustin Chacon", "shape": "dot", "title": "Dustin Chacon"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nepali", "label": "Nepali", "shape": "dot", "title": "Nepali"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Semitic", "label": "Semitic", "shape": "dot", "title": "Semitic"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Inuit", "label": "Inuit", "shape": "dot", "title": "Inuit"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Yiya Chen", "label": "Yiya Chen", "shape": "dot", "title": "Yiya Chen"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kate\u0159ina Chl\u00e1dkov\u00e1", "label": "Kate\u0159ina Chl\u00e1dkov\u00e1", "shape": "dot", "title": "Kate\u0159ina Chl\u00e1dkov\u00e1"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Slovak", "label": "Slovak", "shape": "dot", "title": "Slovak"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kamal Choudhary", "label": "Kamal Choudhary", "shape": "dot", "title": "Kamal Choudhary"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Morten Christiansen", "label": "Morten Christiansen", "shape": "dot", "title": "Morten Christiansen"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Danish", "label": "Danish", "shape": "dot", "title": "Danish"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jan Chrom\u00fd", "label": "Jan Chrom\u00fd", "shape": "dot", "title": "Jan Chrom\u00fd"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Slocak", "label": "Slocak", "shape": "dot", "title": "Slocak"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Daniela Cid de Garcia", "label": "Daniela Cid de Garcia", "shape": "dot", "title": "Daniela Cid de Garcia"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Karaj\u00e1", "label": "Karaj\u00e1", "shape": "dot", "title": "Karaj\u00e1"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Aymeric Collart", "label": "Aymeric Collart", "shape": "dot", "title": "Aymeric Collart"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Paiwan", "label": "Paiwan", "shape": "dot", "title": "Paiwan"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Marie Coppola", "label": "Marie Coppola", "shape": "dot", "title": "Marie Coppola"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Emerging Sign Languages", "label": "Emerging Sign Languages", "shape": "dot", "title": "Emerging Sign Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Greville Corbett", "label": "Greville Corbett", "shape": "dot", "title": "Greville Corbett"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Oceanic Languages", "label": "Oceanic Languages", "shape": "dot", "title": "Oceanic Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Alex Cristia", "label": "Alex Cristia", "shape": "dot", "title": "Alex Cristia"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tsimane", "label": "Tsimane", "shape": "dot", "title": "Tsimane"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Connie de Vos", "label": "Connie de Vos", "shape": "dot", "title": "Connie de Vos"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kata Kolok and Other Sign Languages", "label": "Kata Kolok and Other Sign Languages", "shape": "dot", "title": "Kata Kolok and Other Sign Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Katherine Demuth", "label": "Katherine Demuth", "shape": "dot", "title": "Katherine Demuth"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Christian DiCanio", "label": "Christian DiCanio", "shape": "dot", "title": "Christian DiCanio"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mixtec", "label": "Mixtec", "shape": "dot", "title": "Mixtec"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Triqui", "label": "Triqui", "shape": "dot", "title": "Triqui"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mark Dingemanse", "label": "Mark Dingemanse", "shape": "dot", "title": "Mark Dingemanse"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "West African Languages", "label": "West African Languages", "shape": "dot", "title": "West African Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nicole Dodd", "label": "Nicole Dodd", "shape": "dot", "title": "Nicole Dodd"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Arabic", "label": "Arabic", "shape": "dot", "title": "Arabic"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dusica Durdevic", "label": "Dusica Durdevic", "shape": "dot", "title": "Dusica Durdevic"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Serbian", "label": "Serbian", "shape": "dot", "title": "Serbian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Indranil Dutta", "label": "Indranil Dutta", "shape": "dot", "title": "Indranil Dutta"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Karen Emmory", "label": "Karen Emmory", "shape": "dot", "title": "Karen Emmory"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sign Language", "label": "Sign Language", "shape": "dot", "title": "Sign Language"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rabia Ergin", "label": "Rabia Ergin", "shape": "dot", "title": "Rabia Ergin"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CTSL (village sign language in Turkey)", "label": "CTSL (village sign language in Turkey)", "shape": "dot", "title": "CTSL (village sign language in Turkey)"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Urtzi Etxeberria", "label": "Urtzi Etxeberria", "shape": "dot", "title": "Urtzi Etxeberria"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Maria-Jose Ezeizabarrena", "label": "Maria-Jose Ezeizabarrena", "shape": "dot", "title": "Maria-Jose Ezeizabarrena"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Olga Fedorova", "label": "Olga Fedorova", "shape": "dot", "title": "Olga Fedorova"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Roman Feiman", "label": "Roman Feiman", "shape": "dot", "title": "Roman Feiman"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Molly Flaherty", "label": "Molly Flaherty", "shape": "dot", "title": "Molly Flaherty"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Steven Foley", "label": "Steven Foley", "shape": "dot", "title": "Steven Foley"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Georgian", "label": "Georgian", "shape": "dot", "title": "Georgian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Riccardo Fusaroli", "label": "Riccardo Fusaroli", "shape": "dot", "title": "Riccardo Fusaroli"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rowena Garcia", "label": "Rowena Garcia", "shape": "dot", "title": "Rowena Garcia"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Gabriela Garrido", "label": "Gabriela Garrido", "shape": "dot", "title": "Gabriela Garrido"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Murrinhpatha ", "label": "Murrinhpatha ", "shape": "dot", "title": "Murrinhpatha "}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Susan Gelman", "label": "Susan Gelman", "shape": "dot", "title": "Susan Gelman"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Quechua", "label": "Quechua", "shape": "dot", "title": "Quechua"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Narges Gharavi", "label": "Narges Gharavi", "shape": "dot", "title": "Narges Gharavi"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jana Gold", "label": "Jana Gold", "shape": "dot", "title": "Jana Gold"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BCS (Bosnian, Croatian, Serbian)", "label": "BCS (Bosnian, Croatian, Serbian)", "shape": "dot", "title": "BCS (Bosnian, Croatian, Serbian)"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bantu", "label": "Bantu", "shape": "dot", "title": "Bantu"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Juliana Novo Gomes", "label": "Juliana Novo Gomes", "shape": "dot", "title": "Juliana Novo Gomes"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Russell Gray", "label": "Russell Gray", "shape": "dot", "title": "Russell Gray"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Indo-Pacific Languages", "label": "Indo-Pacific Languages", "shape": "dot", "title": "Indo-Pacific Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ewa Haman", "label": "Ewa Haman", "shape": "dot", "title": "Ewa Haman"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Polish", "label": "Polish", "shape": "dot", "title": "Polish"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Christopher Hammerly", "label": "Christopher Hammerly", "shape": "dot", "title": "Christopher Hammerly"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Anishinaabemowin (Ojibwe)", "label": "Anishinaabemowin (Ojibwe)", "shape": "dot", "title": "Anishinaabemowin (Ojibwe)"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Naomi Havron", "label": "Naomi Havron", "shape": "dot", "title": "Naomi Havron"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Vera Hohaus", "label": "Vera Hohaus", "shape": "dot", "title": "Vera Hohaus"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Samoan", "label": "Samoan", "shape": "dot", "title": "Samoan"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Judith Holler", "label": "Judith Holler", "shape": "dot", "title": "Judith Holler"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Phil Howson", "label": "Phil Howson", "shape": "dot", "title": "Phil Howson"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sorbian", "label": "Sorbian", "shape": "dot", "title": "Sorbian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Yaling Hsiao", "label": "Yaling Hsiao", "shape": "dot", "title": "Yaling Hsiao"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Falk Huettig", "label": "Falk Huettig", "shape": "dot", "title": "Falk Huettig"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Samar Husain", "label": "Samar Husain", "shape": "dot", "title": "Samar Husain"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Samir Husain", "label": "Samir Husain", "shape": "dot", "title": "Samir Husain"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Iraide Ibarretxe-Atunano", "label": "Iraide Ibarretxe-Atunano", "shape": "dot", "title": "Iraide Ibarretxe-Atunano"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Aragonese", "label": "Aragonese", "shape": "dot", "title": "Aragonese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Asturian", "label": "Asturian", "shape": "dot", "title": "Asturian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Catalan", "label": "Catalan", "shape": "dot", "title": "Catalan"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Julian Jara-Ettinger", "label": "Julian Jara-Ettinger", "shape": "dot", "title": "Julian Jara-Ettinger"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Indigenous Amazonian Languages", "label": "Indigenous Amazonian Languages", "shape": "dot", "title": "Indigenous Amazonian Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Marc Joanisse", "label": "Marc Joanisse", "shape": "dot", "title": "Marc Joanisse"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Serbian/Serbo-Croation", "label": "Serbian/Serbo-Croation", "shape": "dot", "title": "Serbian/Serbo-Croation"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bhoomika Kar", "label": "Bhoomika Kar", "shape": "dot", "title": "Bhoomika Kar"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Natalia Kartushina", "label": "Natalia Kartushina", "shape": "dot", "title": "Natalia Kartushina"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Norwegian Dialects, Basque, Russian, Bi/Multilingual Child Dev", "label": "Norwegian Dialects, Basque, Russian, Bi/Multilingual Child Dev", "shape": "dot", "title": "Norwegian Dialects, Basque, Russian, Bi/Multilingual Child Dev"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Maayan Keshev", "label": "Maayan Keshev", "shape": "dot", "title": "Maayan Keshev"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Hebrew", "label": "Hebrew", "shape": "dot", "title": "Hebrew"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Souad Kheder", "label": "Souad Kheder", "shape": "dot", "title": "Souad Kheder"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Algerian", "label": "Algerian", "shape": "dot", "title": "Algerian"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Evan Kidd", "label": "Evan Kidd", "shape": "dot", "title": "Evan Kidd"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Murrinhpatha + Australian Indigenous", "label": "Murrinhpatha + Australian Indigenous", "shape": "dot", "title": "Murrinhpatha + Australian Indigenous"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Eon-Suk Ko", "label": "Eon-Suk Ko", "shape": "dot", "title": "Eon-Suk Ko"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Korean, Child Language Acquisition", "label": "Korean, Child Language Acquisition", "shape": "dot", "title": "Korean, Child Language Acquisition"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Masatoshi Koizumi", "label": "Masatoshi Koizumi", "shape": "dot", "title": "Masatoshi Koizumi"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kaqchikel Mayan", "label": "Kaqchikel Mayan", "shape": "dot", "title": "Kaqchikel Mayan"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Manfred Krifka", "label": "Manfred Krifka", "shape": "dot", "title": "Manfred Krifka"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Creol", "label": "Creol", "shape": "dot", "title": "Creol"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Uttam Kumar", "label": "Uttam Kumar", "shape": "dot", "title": "Uttam Kumar"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Victor Kuperman", "label": "Victor Kuperman", "shape": "dot", "title": "Victor Kuperman"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Non-native English", "label": "Non-native English", "shape": "dot", "title": "Non-native English"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dave Kush", "label": "Dave Kush", "shape": "dot", "title": "Dave Kush"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Radim Lacina", "label": "Radim Lacina", "shape": "dot", "title": "Radim Lacina"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Czech", "label": "Czech", "shape": "dot", "title": "Czech"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Regine Lai", "label": "Regine Lai", "shape": "dot", "title": "Regine Lai"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Cantonese", "label": "Cantonese", "shape": "dot", "title": "Cantonese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Itziar Laka", "label": "Itziar Laka", "shape": "dot", "title": "Itziar Laka"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Suzi Lima", "label": "Suzi Lima", "shape": "dot", "title": "Suzi Lima"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "South American Indigenous, African Languages", "label": "South American Indigenous, African Languages", "shape": "dot", "title": "South American Indigenous, African Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "John Lipski", "label": "John Lipski", "shape": "dot", "title": "John Lipski"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Media Lengua", "label": "Media Lengua", "shape": "dot", "title": "Media Lengua"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Palenquero", "label": "Palenquero", "shape": "dot", "title": "Palenquero"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Michele Lopocaro", "label": "Michele Lopocaro", "shape": "dot", "title": "Michele Lopocaro"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Magda Luniewska", "label": "Magda Luniewska", "shape": "dot", "title": "Magda Luniewska"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Hannah Lutzenberger", "label": "Hannah Lutzenberger", "shape": "dot", "title": "Hannah Lutzenberger"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kata Kolok", "label": "Kata Kolok", "shape": "dot", "title": "Kata Kolok"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Maryellen Macdonald", "label": "Maryellen Macdonald", "shape": "dot", "title": "Maryellen Macdonald"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Maired MacSweeny", "label": "Maired MacSweeny", "shape": "dot", "title": "Maired MacSweeny"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Marcus Maia", "label": "Marcus Maia", "shape": "dot", "title": "Marcus Maia"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Asifa Majid", "label": "Asifa Majid", "shape": "dot", "title": "Asifa Majid"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "a lot", "label": "a lot", "shape": "dot", "title": "a lot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Saima Malik-Moraleda", "label": "Saima Malik-Moraleda", "shape": "dot", "title": "Saima Malik-Moraleda"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nivedita Mani", "label": "Nivedita Mani", "shape": "dot", "title": "Nivedita Mani"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bruce Mannheim", "label": "Bruce Mannheim", "shape": "dot", "title": "Bruce Mannheim"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Elizabeth Mayer", "label": "Elizabeth Mayer", "shape": "dot", "title": "Elizabeth Mayer"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Julien Mayor", "label": "Julien Mayor", "shape": "dot", "title": "Julien Mayor"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Norwegian Dialects", "label": "Norwegian Dialects", "shape": "dot", "title": "Norwegian Dialects"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mirrah Maziyah", "label": "Mirrah Maziyah", "shape": "dot", "title": "Mirrah Maziyah"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Reiko Mazuka", "label": "Reiko Mazuka", "shape": "dot", "title": "Reiko Mazuka"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Marwa Mekni-Toujani", "label": "Marwa Mekni-Toujani", "shape": "dot", "title": "Marwa Mekni-Toujani"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tunisian Arabic", "label": "Tunisian Arabic", "shape": "dot", "title": "Tunisian Arabic"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Alissa Melinger", "label": "Alissa Melinger", "shape": "dot", "title": "Alissa Melinger"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Scots", "label": "Scots", "shape": "dot", "title": "Scots"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Scottish English", "label": "Scottish English", "shape": "dot", "title": "Scottish English"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Aya Meltzer-Asscher", "label": "Aya Meltzer-Asscher", "shape": "dot", "title": "Aya Meltzer-Asscher"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Gozde Mercan", "label": "Gozde Mercan", "shape": "dot", "title": "Gozde Mercan"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Turkish", "label": "Turkish", "shape": "dot", "title": "Turkish"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jelena Mirkovic", "label": "Jelena Mirkovic", "shape": "dot", "title": "Jelena Mirkovic"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ramesh Mishra", "label": "Ramesh Mishra", "shape": "dot", "title": "Ramesh Mishra"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Auromitra Mitra", "label": "Auromitra Mitra", "shape": "dot", "title": "Auromitra Mitra"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Holger Mitterer", "label": "Holger Mitterer", "shape": "dot", "title": "Holger Mitterer"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Maltese", "label": "Maltese", "shape": "dot", "title": "Maltese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Swarnendu Moitra", "label": "Swarnendu Moitra", "shape": "dot", "title": "Swarnendu Moitra"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bangla", "label": "Bangla", "shape": "dot", "title": "Bangla"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Maarten Mous", "label": "Maarten Mous", "shape": "dot", "title": "Maarten Mous"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Konso", "label": "Konso", "shape": "dot", "title": "Konso"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Amaia Munarriz", "label": "Amaia Munarriz", "shape": "dot", "title": "Amaia Munarriz"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Andryi Myachikov", "label": "Andryi Myachikov", "shape": "dot", "title": "Andryi Myachikov"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mahkuwa", "label": "Mahkuwa", "shape": "dot", "title": "Mahkuwa"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Savithry Namboodiripad", "label": "Savithry Namboodiripad", "shape": "dot", "title": "Savithry Namboodiripad"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Malayalam", "label": "Malayalam", "shape": "dot", "title": "Malayalam"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Marcia Nascimento", "label": "Marcia Nascimento", "shape": "dot", "title": "Marcia Nascimento"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kaingang", "label": "Kaingang", "shape": "dot", "title": "Kaingang"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jessica Nieder", "label": "Jessica Nieder", "shape": "dot", "title": "Jessica Nieder"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Elisabeth Norcliffe", "label": "Elisabeth Norcliffe", "shape": "dot", "title": "Elisabeth Norcliffe"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tzeltal/Mayan Languages", "label": "Tzeltal/Mayan Languages", "shape": "dot", "title": "Tzeltal/Mayan Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rachel Nordlinger", "label": "Rachel Nordlinger", "shape": "dot", "title": "Rachel Nordlinger"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dogus Can Oksuz", "label": "Dogus Can Oksuz", "shape": "dot", "title": "Dogus Can Oksuz"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Cristiane Oliveira", "label": "Cristiane Oliveira", "shape": "dot", "title": "Cristiane Oliveira"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rosana Oliveira", "label": "Rosana Oliveira", "shape": "dot", "title": "Rosana Oliveira"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Xavante", "label": "Xavante", "shape": "dot", "title": "Xavante"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Agnieszka Otwinowska-Kastelanicz", "label": "Agnieszka Otwinowska-Kastelanicz", "shape": "dot", "title": "Agnieszka Otwinowska-Kastelanicz"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Asli Ozyurek", "label": "Asli Ozyurek", "shape": "dot", "title": "Asli Ozyurek"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "German", "label": "German", "shape": "dot", "title": "German"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Chinese", "label": "Chinese", "shape": "dot", "title": "Chinese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Turkish Sign Language", "label": "Turkish Sign Language", "shape": "dot", "title": "Turkish Sign Language"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Italian Sign Language", "label": "Italian Sign Language", "shape": "dot", "title": "Italian Sign Language"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dutch Sign Language", "label": "Dutch Sign Language", "shape": "dot", "title": "Dutch Sign Language"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "German Sign Language", "label": "German Sign Language", "shape": "dot", "title": "German Sign Language"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Prakash Padakannaya", "label": "Prakash Padakannaya", "shape": "dot", "title": "Prakash Padakannaya"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nikola Paillereau", "label": "Nikola Paillereau", "shape": "dot", "title": "Nikola Paillereau"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Czech/Slovak", "label": "Czech/Slovak", "shape": "dot", "title": "Czech/Slovak"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pedro Mateo Pedro", "label": "Pedro Mateo Pedro", "shape": "dot", "title": "Pedro Mateo Pedro"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mayan Languages", "label": "Mayan Languages", "shape": "dot", "title": "Mayan Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Claudia Pe\u00f1aloza", "label": "Claudia Pe\u00f1aloza", "shape": "dot", "title": "Claudia Pe\u00f1aloza"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Catalan-Spanish Bilingualism - Clinical/Aphasia and Dementia", "label": "Catalan-Spanish Bilingualism - Clinical/Aphasia and Dementia", "shape": "dot", "title": "Catalan-Spanish Bilingualism - Clinical/Aphasia and Dementia"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Arum Perwitasari", "label": "Arum Perwitasari", "shape": "dot", "title": "Arum Perwitasari"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Javanese", "label": "Javanese", "shape": "dot", "title": "Javanese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sudanese", "label": "Sudanese", "shape": "dot", "title": "Sudanese"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Steve Piantadosi", "label": "Steve Piantadosi", "shape": "dot", "title": "Steve Piantadosi"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ben Pitt", "label": "Ben Pitt", "shape": "dot", "title": "Ben Pitt"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jed Pizzaro-Guevara", "label": "Jed Pizzaro-Guevara", "shape": "dot", "title": "Jed Pizzaro-Guevara"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Maria \"Masha\" Polinsky", "label": "Maria \"Masha\" Polinsky", "shape": "dot", "title": "Maria \"Masha\" Polinsky"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Cacauses, Austronesian, and Mayan Languages", "label": "Cacauses, Austronesian, and Mayan Languages", "shape": "dot", "title": "Cacauses, Austronesian, and Mayan Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "S Prema", "label": "S Prema", "shape": "dot", "title": "S Prema"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Malayalam, Endangered Languages of Kerala", "label": "Malayalam, Endangered Languages of Kerala", "shape": "dot", "title": "Malayalam, Endangered Languages of Kerala"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jess Price", "label": "Jess Price", "shape": "dot", "title": "Jess Price"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jennie Pyers", "label": "Jennie Pyers", "shape": "dot", "title": "Jennie Pyers"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Emerging Sign Languages (Nicaragua)", "label": "Emerging Sign Languages (Nicaragua)", "shape": "dot", "title": "Emerging Sign Languages (Nicaragua)"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Supriya Ray", "label": "Supriya Ray", "shape": "dot", "title": "Supriya Ray"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bojana Ristic", "label": "Bojana Ristic", "shape": "dot", "title": "Bojana Ristic"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jens Roeser", "label": "Jens Roeser", "shape": "dot", "title": "Jens Roeser"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Caro Rowland", "label": "Caro Rowland", "shape": "dot", "title": "Caro Rowland"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Paula Rubio-Fernandez", "label": "Paula Rubio-Fernandez", "shape": "dot", "title": "Paula Rubio-Fernandez"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rachel Ryskin", "label": "Rachel Ryskin", "shape": "dot", "title": "Rachel Ryskin"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Liliana Sanchez", "label": "Liliana Sanchez", "shape": "dot", "title": "Liliana Sanchez"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jenni Sander", "label": "Jenni Sander", "shape": "dot", "title": "Jenni Sander"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Poroma Sanyal", "label": "Poroma Sanyal", "shape": "dot", "title": "Poroma Sanyal"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Kelsey Sasaki", "label": "Kelsey Sasaki", "shape": "dot", "title": "Kelsey Sasaki"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Uli Sauerland", "label": "Uli Sauerland", "shape": "dot", "title": "Uli Sauerland"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Pirah\u00e3", "label": "Pirah\u00e3", "shape": "dot", "title": "Pirah\u00e3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Sebastian Sauppe", "label": "Sebastian Sauppe", "shape": "dot", "title": "Sebastian Sauppe"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\u00c4iwoo", "label": "\u00c4iwoo", "shape": "dot", "title": "\u00c4iwoo"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Camila Scaff", "label": "Camila Scaff", "shape": "dot", "title": "Camila Scaff"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Adam Schembri", "label": "Adam Schembri", "shape": "dot", "title": "Adam Schembri"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Australian and British Sign Languages", "label": "Australian and British Sign Languages", "shape": "dot", "title": "Australian and British Sign Languages"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Niels Schiller", "label": "Niels Schiller", "shape": "dot", "title": "Niels Schiller"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mark Seidenberg", "label": "Mark Seidenberg", "shape": "dot", "title": "Mark Seidenberg"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Irina Sekerina", "label": "Irina Sekerina", "shape": "dot", "title": "Irina Sekerina"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Adi Shechter", "label": "Adi Shechter", "shape": "dot", "title": "Adi Shechter"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Zohreh Shiamizadeh", "label": "Zohreh Shiamizadeh", "shape": "dot", "title": "Zohreh Shiamizadeh"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Noam Siegelmann", "label": "Noam Siegelmann", "shape": "dot", "title": "Noam Siegelmann"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Leher Singh", "label": "Leher Singh", "shape": "dot", "title": "Leher Singh"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bi/Multilingual Infant Dev", "label": "Bi/Multilingual Infant Dev", "shape": "dot", "title": "Bi/Multilingual Infant Dev"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Nandini Singh", "label": "Nandini Singh", "shape": "dot", "title": "Nandini Singh"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Indian Languages - fMRI Imagining Studies", "label": "Indian Languages - fMRI Imagining Studies", "shape": "dot", "title": "Indian Languages - fMRI Imagining Studies"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Niharika Singh", "label": "Niharika Singh", "shape": "dot", "title": "Niharika Singh"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Natalia Slioussar", "label": "Natalia Slioussar", "shape": "dot", "title": "Natalia Slioussar"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Fliip Smol\u00edk", "label": "Fliip Smol\u00edk", "shape": "dot", "title": "Fliip Smol\u00edk"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bidisha Som", "label": "Bidisha Som", "shape": "dot", "title": "Bidisha Som"}]);
+                  edges = new vis.DataSet([{"from": "Hannah Sarvasy", "to": "Nungon", "value": 7}, {"from": "Karina  Fascinetto-Zago", "to": "Venetian", "value": 3}, {"from": "Kihyo Park", "to": "Korean", "value": 3}, {"from": "Rebecca Zhu", "to": "Swahili", "value": 3}, {"from": "Rebecca Zhu", "to": "Luo", "value": 3}, {"from": "Nattanun Chanchaochai", "to": "Thai", "value": 3}, {"from": "Jennifer Culbertson", "to": "K\u00ee\u00eetharaka", "value": 3}, {"from": "Simon Kirby", "to": "Nicaraguan Sign Language", "value": 3}, {"from": "Valts Ernstreits", "to": "Livonian", "value": 2}, {"from": "M Carmen Parafita Couto", "to": "Galician", "value": 2}, {"from": "M Carmen Parafita Couto", "to": "Papiamento", "value": 2}, {"from": "M Carmen Parafita Couto", "to": "Welsh", "value": 2}, {"from": "Iria de-Dios-Flores", "to": "Galician", "value": 2}, {"from": "Gede Primahadi Wijaya Rajeg", "to": "Indonesian", "value": 2}, {"from": "Gede Primahadi Wijaya Rajeg", "to": "Balinese", "value": 2}, {"from": "Anastasiya Lopukhina", "to": "Russian", "value": 2}, {"from": "Pegah Faghiri", "to": "Persian", "value": 2}, {"from": "Azler Garcia", "to": "Basque", "value": 1}, {"from": "Ingeborg Sophie Ribu", "to": "Norwegian", "value": 1}, {"from": "Zed Sehyr", "to": "American Sign Language", "value": 1}, {"from": "Vishal  Arvindam ", "to": "Telugu ", "value": 1}, {"from": "Aigul Khanova", "to": "Tatar", "value": 1}, {"from": "Rodrigo Dal Ben", "to": "Portuguese", "value": 1}, {"from": "Roxana Botezatu", "to": "Spanish", "value": 1}, {"from": "Roxana Botezatu", "to": "Mandarin", "value": 1}, {"from": "Roxana Botezatu", "to": "Dutch", "value": 1}, {"from": "Aditi Lahiri", "to": "Bengali", "value": 1}, {"from": "Allison Wetterlin", "to": "Norwegian", "value": 1}, {"from": "Allison Wetterlin", "to": "Swedish", "value": 1}, {"from": "Allison Wetterlin", "to": "Bengali", "value": 1}, {"from": "Nadja Althaus", "to": "Swedish", "value": 1}, {"from": "Nadja Althaus", "to": "Bengali", "value": 1}, {"from": "Sandra Kotzor", "to": "Bengali", "value": 1}, {"from": "Judith Tonhauser", "to": "Guarani", "value": 1}, {"from": "Juhayna  Taha", "to": "Arabic ", "value": 1}, {"from": "Ahmed Khorsheed", "to": "Malay", "value": 1}, {"from": "Dorjderem Byambasuren", "to": "Mongolian", "value": 1}, {"from": "Bhuvana Narasimhan", "to": "Hindi", "value": 1}, {"from": "Bhuvana Narasimhan", "to": "Tamil", "value": 1}, {"from": "Norielle Adricula", "to": "Tagalog", "value": 1}, {"from": "Jidong Chen", "to": "Mandarin", "value": 1}, {"from": "Aoju Chen", "to": "Mandarin", "value": 1}, {"from": "Penelope Brown", "to": "Tzeltal", "value": 1}, {"from": "Xinchun Wang", "to": "Mandarin", "value": 1}, {"from": "Naledi Kgolo-Lotshwao", "to": "Setswana", "value": 1}, {"from": "Yuxin Fan", "to": "Classical Manchu, Evenki (Northern dialects)", "value": 1}, {"from": "Madhushree Chakrabarty", "to": "Bangla ", "value": 1}, {"from": "Elouatiq Abdellah", "to": "Tashelhiyt Berber", "value": 1}, {"from": "Evangelia Adamou", "to": "Pomak", "value": 1}, {"from": "Evangelia Adamou", "to": "Romani", "value": 1}, {"from": "Evangelia Adamou", "to": "Ngigua", "value": 1}, {"from": "Suvarrna Alladi", "to": "", "value": 1}, {"from": "Luiz Amaral", "to": "Wapichana", "value": 1}, {"from": "Caroline Andrews", "to": "Shipibo-Konibo", "value": 1}, {"from": "Valentina Bambini", "to": "Southern Italian Dialects", "value": 1}, {"from": "Brett Baker", "to": "Wubuy", "value": 1}, {"from": "Valentina Bambini", "to": "Guarani", "value": 1}, {"from": "Hassan Banaruee", "to": "Bandari", "value": 1}, {"from": "Cathi Best", "to": "", "value": 1}, {"from": "Pranesh Bhargava", "to": "", "value": 1}, {"from": "Sakshi Bhatia", "to": "Urdu", "value": 1}, {"from": "Sakshi Bhatia", "to": "Hindi", "value": 1}, {"from": "Balthasar Bickel", "to": "Nepalese", "value": 1}, {"from": "Balthasar Bickel", "to": "Vietnamese", "value": 1}, {"from": "Balthasar Bickel", "to": "Peruvian", "value": 1}, {"from": "Damian Blasi", "to": "", "value": 1}, {"from": "Ivan Bondoc", "to": "Tagalog", "value": 1}, {"from": "Ina Bornkessel-Schlesewsky", "to": "Australian Indigenous Languauges", "value": 1}, {"from": "Federica Breimaier", "to": "Southern Italian Dialects", "value": 1}, {"from": "Marisa Casillas", "to": "Rossel Islanders", "value": 1}, {"from": "Marisa Casillas", "to": "Tzeltal", "value": 1}, {"from": "Dave Kenneth Cayado", "to": "Tagalog", "value": 1}, {"from": "Dustin Chacon", "to": "Hindi", "value": 1}, {"from": "Dustin Chacon", "to": "Bengali", "value": 1}, {"from": "Dustin Chacon", "to": "Nepali", "value": 1}, {"from": "Dustin Chacon", "to": "Semitic", "value": 1}, {"from": "Dustin Chacon", "to": "Inuit", "value": 1}, {"from": "Madhushree Chakrabarty", "to": "Bengali", "value": 1}, {"from": "Yiya Chen", "to": "Mandarin", "value": 1}, {"from": "Kate\u0159ina Chl\u00e1dkov\u00e1", "to": "Slovak", "value": 1}, {"from": "Kamal Choudhary", "to": "", "value": 1}, {"from": "Morten Christiansen", "to": "Danish", "value": 1}, {"from": "Jan Chrom\u00fd", "to": "Slocak", "value": 1}, {"from": "Daniela Cid de Garcia", "to": "Karaj\u00e1", "value": 1}, {"from": "Aymeric Collart", "to": "Paiwan", "value": 1}, {"from": "Marie Coppola", "to": "Emerging Sign Languages", "value": 1}, {"from": "Greville Corbett", "to": "Oceanic Languages", "value": 1}, {"from": "Alex Cristia", "to": "Tsimane", "value": 1}, {"from": "Jennifer Culbertson", "to": "", "value": 1}, {"from": "Connie de Vos", "to": "Kata Kolok and Other Sign Languages", "value": 1}, {"from": "Katherine Demuth", "to": "", "value": 1}, {"from": "Christian DiCanio", "to": "Mixtec", "value": 1}, {"from": "Christian DiCanio", "to": "Triqui", "value": 1}, {"from": "Mark Dingemanse", "to": "West African Languages", "value": 1}, {"from": "Nicole Dodd", "to": "Arabic", "value": 1}, {"from": "Dusica Durdevic", "to": "Serbian", "value": 1}, {"from": "Indranil Dutta", "to": "Bengali", "value": 1}, {"from": "Karen Emmory", "to": "Sign Language", "value": 1}, {"from": "Rabia Ergin", "to": "CTSL (village sign language in Turkey)", "value": 1}, {"from": "Urtzi Etxeberria", "to": "Basque", "value": 1}, {"from": "Maria-Jose Ezeizabarrena", "to": "Basque", "value": 1}, {"from": "Olga Fedorova", "to": "Russian", "value": 1}, {"from": "Roman Feiman", "to": "Tagalog", "value": 1}, {"from": "Molly Flaherty", "to": "", "value": 1}, {"from": "Steven Foley", "to": "Georgian", "value": 1}, {"from": "Riccardo Fusaroli", "to": "Danish", "value": 1}, {"from": "Rowena Garcia", "to": "Tagalog", "value": 1}, {"from": "Gabriela Garrido", "to": "Murrinhpatha ", "value": 1}, {"from": "Gabriela Garrido", "to": "Tzeltal", "value": 1}, {"from": "Susan Gelman", "to": "Quechua", "value": 1}, {"from": "Susan Gelman", "to": "Mandarin", "value": 1}, {"from": "Narges Gharavi", "to": "Persian", "value": 1}, {"from": "Jana Gold", "to": "BCS (Bosnian, Croatian, Serbian)", "value": 1}, {"from": "Jana Gold", "to": "Bantu", "value": 1}, {"from": "Juliana Novo Gomes", "to": "Karaj\u00e1", "value": 1}, {"from": "", "to": "", "value": 1}, {"from": "Russell Gray", "to": "Indo-Pacific Languages", "value": 1}, {"from": "Ewa Haman", "to": "Polish", "value": 1}, {"from": "Christopher Hammerly", "to": "Anishinaabemowin (Ojibwe)", "value": 1}, {"from": "Naomi Havron", "to": "", "value": 1}, {"from": "Vera Hohaus", "to": "Samoan", "value": 1}, {"from": "Judith Holler", "to": "", "value": 1}, {"from": "Phil Howson", "to": "Sorbian", "value": 1}, {"from": "Yaling Hsiao", "to": "Mandarin", "value": 1}, {"from": "Falk Huettig", "to": "", "value": 1}, {"from": "Samar Husain", "to": "", "value": 1}, {"from": "Samir Husain", "to": "", "value": 1}, {"from": "Iraide Ibarretxe-Atunano", "to": "Basque", "value": 1}, {"from": "Iraide Ibarretxe-Atunano", "to": "Aragonese", "value": 1}, {"from": "Iraide Ibarretxe-Atunano", "to": "Asturian", "value": 1}, {"from": "Iraide Ibarretxe-Atunano", "to": "Catalan", "value": 1}, {"from": "Julian Jara-Ettinger", "to": "Indigenous Amazonian Languages", "value": 1}, {"from": "Marc Joanisse", "to": "Serbian/Serbo-Croation", "value": 1}, {"from": "Bhoomika Kar", "to": "", "value": 1}, {"from": "Natalia Kartushina", "to": "Norwegian Dialects, Basque, Russian, Bi/Multilingual Child Dev", "value": 1}, {"from": "Maayan Keshev", "to": "Hebrew", "value": 1}, {"from": "Souad Kheder", "to": "Algerian", "value": 1}, {"from": "Evan Kidd", "to": "Murrinhpatha + Australian Indigenous", "value": 1}, {"from": "Eon-Suk Ko", "to": "Korean, Child Language Acquisition", "value": 1}, {"from": "Masatoshi Koizumi", "to": "Kaqchikel Mayan", "value": 1}, {"from": "Manfred Krifka", "to": "Creol", "value": 1}, {"from": "Uttam Kumar", "to": "", "value": 1}, {"from": "Victor Kuperman", "to": "Non-native English", "value": 1}, {"from": "Dave Kush", "to": "Norwegian", "value": 1}, {"from": "Radim Lacina", "to": "Czech", "value": 1}, {"from": "Regine Lai", "to": "Cantonese", "value": 1}, {"from": "Itziar Laka", "to": "Basque", "value": 1}, {"from": "Suzi Lima", "to": "South American Indigenous, African Languages", "value": 1}, {"from": "John Lipski", "to": "Media Lengua", "value": 1}, {"from": "John Lipski", "to": "Palenquero", "value": 1}, {"from": "Michele Lopocaro", "to": "Southern Italian Dialects", "value": 1}, {"from": "Magda Luniewska", "to": "Polish", "value": 1}, {"from": "Hannah Lutzenberger", "to": "Kata Kolok", "value": 1}, {"from": "Maryellen Macdonald", "to": "Serbian/Serbo-Croation", "value": 1}, {"from": "Maired MacSweeny", "to": "Sign Language", "value": 1}, {"from": "Marcus Maia", "to": "Karaj\u00e1", "value": 1}, {"from": "Asifa Majid", "to": "a lot", "value": 1}, {"from": "Saima Malik-Moraleda", "to": "Tsimane", "value": 1}, {"from": "Nivedita Mani", "to": "", "value": 1}, {"from": "Bruce Mannheim", "to": "Quechua", "value": 1}, {"from": "Elizabeth Mayer", "to": "Quechua", "value": 1}, {"from": "Julien Mayor", "to": "Norwegian Dialects", "value": 1}, {"from": "Mirrah Maziyah", "to": "Malay", "value": 1}, {"from": "Reiko Mazuka", "to": "", "value": 1}, {"from": "Marwa Mekni-Toujani", "to": "Tunisian Arabic", "value": 1}, {"from": "Alissa Melinger", "to": "Scots", "value": 1}, {"from": "Alissa Melinger", "to": "Scottish English", "value": 1}, {"from": "Aya Meltzer-Asscher", "to": "Hebrew", "value": 1}, {"from": "Gozde Mercan", "to": "Turkish", "value": 1}, {"from": "Jelena Mirkovic", "to": "Serbian/Serbo-Croation", "value": 1}, {"from": "Ramesh Mishra", "to": "", "value": 1}, {"from": "Auromitra Mitra", "to": "Bengali", "value": 1}, {"from": "Holger Mitterer", "to": "Maltese", "value": 1}, {"from": "Swarnendu Moitra", "to": "Bangla", "value": 1}, {"from": "Maarten Mous", "to": "Konso", "value": 1}, {"from": "Amaia Munarriz", "to": "Basque", "value": 1}, {"from": "Andryi Myachikov", "to": "Russian", "value": 1}, {"from": "", "to": "Mahkuwa", "value": 1}, {"from": "Savithry Namboodiripad", "to": "Malayalam", "value": 1}, {"from": "Marcia Nascimento", "to": "Kaingang", "value": 1}, {"from": "Jessica Nieder", "to": "Maltese", "value": 1}, {"from": "Elisabeth Norcliffe", "to": "Tzeltal/Mayan Languages", "value": 1}, {"from": "Rachel Nordlinger", "to": "Murrinhpatha + Australian Indigenous", "value": 1}, {"from": "Dogus Can Oksuz", "to": "Turkish", "value": 1}, {"from": "Cristiane Oliveira", "to": "Karaj\u00e1", "value": 1}, {"from": "Rosana Oliveira", "to": "Xavante", "value": 1}, {"from": "Agnieszka Otwinowska-Kastelanicz", "to": "Polish", "value": 1}, {"from": "Asli Ozyurek", "to": "Turkish", "value": 1}, {"from": "Asli Ozyurek", "to": "Dutch", "value": 1}, {"from": "Asli Ozyurek", "to": "German", "value": 1}, {"from": "Asli Ozyurek", "to": "Chinese", "value": 1}, {"from": "Asli Ozyurek", "to": "Turkish Sign Language", "value": 1}, {"from": "Asli Ozyurek", "to": "Italian Sign Language", "value": 1}, {"from": "Asli Ozyurek", "to": "Dutch Sign Language", "value": 1}, {"from": "Asli Ozyurek", "to": "German Sign Language", "value": 1}, {"from": "Prakash Padakannaya", "to": "", "value": 1}, {"from": "Nikola Paillereau", "to": "Czech/Slovak", "value": 1}, {"from": "Pedro Mateo Pedro", "to": "Mayan Languages", "value": 1}, {"from": "Claudia Pe\u00f1aloza", "to": "Catalan-Spanish Bilingualism - Clinical/Aphasia and Dementia", "value": 1}, {"from": "Arum Perwitasari", "to": "Javanese", "value": 1}, {"from": "Arum Perwitasari", "to": "Sudanese", "value": 1}, {"from": "Steve Piantadosi", "to": "Indigenous Amazonian Languages", "value": 1}, {"from": "Ben Pitt", "to": "Indigenous Amazonian Languages", "value": 1}, {"from": "Jed Pizzaro-Guevara", "to": "Tagalog", "value": 1}, {"from": "Maria \"Masha\" Polinsky", "to": "Cacauses, Austronesian, and Mayan Languages", "value": 1}, {"from": "S Prema", "to": "Malayalam, Endangered Languages of Kerala", "value": 1}, {"from": "Jess Price", "to": "Malay", "value": 1}, {"from": "Jennie Pyers", "to": "Emerging Sign Languages (Nicaragua)", "value": 1}, {"from": "Supriya Ray", "to": "", "value": 1}, {"from": "Bojana Ristic", "to": "BCS (Bosnian, Croatian, Serbian)", "value": 1}, {"from": "Jens Roeser", "to": "Tagalog", "value": 1}, {"from": "Caro Rowland", "to": "Tashelhiyt Berber", "value": 1}, {"from": "Paula Rubio-Fernandez", "to": "", "value": 1}, {"from": "Rachel Ryskin", "to": "", "value": 1}, {"from": "Liliana Sanchez", "to": "Quechua", "value": 1}, {"from": "Jenni Sander", "to": "Dutch Sign Language", "value": 1}, {"from": "Poroma Sanyal", "to": "", "value": 1}, {"from": "Kelsey Sasaki", "to": "", "value": 1}, {"from": "Uli Sauerland", "to": "Kaingang", "value": 1}, {"from": "Uli Sauerland", "to": "Pirah\u00e3", "value": 1}, {"from": "Sebastian Sauppe", "to": "Tagalog", "value": 1}, {"from": "Sebastian Sauppe", "to": "Hindi", "value": 1}, {"from": "Sebastian Sauppe", "to": "Basque", "value": 1}, {"from": "Sebastian Sauppe", "to": "\u00c4iwoo", "value": 1}, {"from": "Camila Scaff", "to": "Tsimane", "value": 1}, {"from": "Adam Schembri", "to": "Australian and British Sign Languages", "value": 1}, {"from": "Niels Schiller", "to": "Mandarin", "value": 1}, {"from": "Mark Seidenberg", "to": "Serbian/Serbo-Croation", "value": 1}, {"from": "Irina Sekerina", "to": "Russian", "value": 1}, {"from": "Adi Shechter", "to": "Hebrew", "value": 1}, {"from": "Zohreh Shiamizadeh", "to": "Persian", "value": 1}, {"from": "Noam Siegelmann", "to": "Non-native English", "value": 1}, {"from": "Leher Singh", "to": "Bi/Multilingual Infant Dev", "value": 1}, {"from": "Nandini Singh", "to": "Indian Languages - fMRI Imagining Studies", "value": 1}, {"from": "Niharika Singh", "to": "", "value": 1}, {"from": "Natalia Slioussar", "to": "Russian", "value": 1}, {"from": "Fliip Smol\u00edk", "to": "Czech/Slovak", "value": 1}, {"from": "Bidisha Som", "to": "", "value": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
